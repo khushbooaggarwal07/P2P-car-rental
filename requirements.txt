@@ -1,2 +1,3 @@
-streamlit
-chromadb
+flask==3.0.3
+anthropic==0.34.2
+firebase-admin==6.5.0

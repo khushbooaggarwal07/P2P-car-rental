@@ -1,96 +1,132 @@
-# PeerDrive — Peer-to-Peer Car Rental Platform
+# 🚗 PeerDrive — Peer-to-Peer Car Rental with Firebase + LLM
 
-A full-stack peer-to-peer car rental web app built with **Python Flask** and integrated with a **Large Language Model (LLM)** via the Anthropic Claude API.
-
----
-
-## Emerging Technology: LLM Integration
-
-This project integrates an **LLM (Large Language Model)** — specifically **Claude claude-sonnet-4-20250514** — to power an intelligent car recommendation assistant called **DriveBot**.
-
-**How it works:**
-1. User opens the chat widget on the website
-2. The frontend sends the user's message + chat history to `/api/chat`
-3. Flask calls the Anthropic Claude API with a system prompt containing live car listings
-4. Claude reasons about the user's needs and recommends the best car
-5. The response is streamed back to the user in real time
-
-This means DriveBot has **live awareness** of all available cars, their prices, features, and availability — not just generic knowledge.
+A full-stack peer-to-peer car rental app built with **Python Flask**, **Firebase Firestore** (real-time cloud database), and **Claude LLM** (AI assistant).
 
 ---
 
-## Setup & Run
+## 🧠 Emerging Technologies Used
 
-### 1. Install dependencies
+| Technology | Role |
+|---|---|
+| **LLM (Claude API)** | AI DriveBot assistant — recommends cars based on user needs |
+| **Firebase Firestore** | Real-time cloud database — stores all listings & bookings permanently |
+
+---
+
+## 🛠 Tech Stack
+
+| Layer | Technology |
+|---|---|
+| Backend | Python + Flask |
+| Database | Firebase Firestore (NoSQL cloud DB) |
+| AI | Anthropic Claude LLM |
+| Frontend | HTML + CSS + Vanilla JS |
+
+---
+
+## 📁 Project Structure
+
+```
+carshare/
+├── app.py                  ← Flask backend + Firebase + LLM
+├── serviceAccountKey.json  ← YOUR Firebase key (you create this)
+├── requirements.txt
+├── README.md
+└── templates/
+    └── index.html          ← Full frontend
+```
+
+---
+
+## 🚀 Setup in 5 Steps
+
+### Step 1 — Install dependencies
 ```bash
 pip install -r requirements.txt
 ```
 
-### 2. Set your Anthropic API key
-```bash
-# On Mac/Linux:
-export ANTHROPIC_API_KEY=your_api_key_here
+### Step 2 — Create a Firebase project
+1. Go to **https://console.firebase.google.com**
+2. Click **"Add Project"** → give it a name (e.g. `peerdrive`)
+3. Disable Google Analytics (not needed) → Create Project
 
-# On Windows:
-set ANTHROPIC_API_KEY=your_api_key_here
-```
-Get your key from: https://console.anthropic.com
+### Step 3 — Set up Firestore
+1. In your Firebase project, go to **Build → Firestore Database**
+2. Click **"Create database"**
+3. Choose **"Start in test mode"** (allows all reads/writes for 30 days)
+4. Select a region (e.g. `asia-south1` for India) → Done
 
-### 3. Run the app
+### Step 4 — Get your Service Account Key
+1. In Firebase Console → **Project Settings** (gear icon)
+2. Go to **"Service accounts"** tab
+3. Click **"Generate new private key"** → Download the JSON file
+4. **Rename it to `serviceAccountKey.json`**
+5. **Place it in the `carshare/` folder** (same folder as `app.py`)
+
+### Step 5 — Set your Anthropic API key & run
 ```bash
+# Mac/Linux
+export ANTHROPIC_API_KEY=sk-ant-xxxxxxxx
+
+# Windows
+set ANTHROPIC_API_KEY=sk-ant-xxxxxxxx
+
+# Run the app
 python app.py
 ```
 
-### 4. Open in browser
+Open **http://localhost:5000** in your browser ✅
+
+---
+
+## ✨ How Firebase Works in This App
+
 ```
-http://localhost:5000
+User submits "List My Car" form
+        ↓
+Flask receives POST /api/list-car
+        ↓
+firebase_admin writes to Firestore "cars" collection
+        ↓
+Data saved permanently in the cloud ☁️
+        ↓
+Next visitor opens the app → Flask reads from Firestore
+        ↓
+All listings show up instantly (even after server restart)
 ```
 
----
+### Firestore Collections
 
-## Features
-
-### For Renters
-- **Browse Cars** — Filter by fuel type, transmission, availability
-- **Book Instantly** — Pick dates, enter details, confirm in one click
-- **AI Assistant (DriveBot)** — Chat with an LLM to get personalised car recommendations
-
-### For Car Owners
-- **List Your Car** — Fill a simple form, car goes live immediately
-- **Set Your Price** — Choose your own daily rate
-- **Track Availability** — Car auto-marked as booked when rented
-
-### Platform
-- Live stats: total cars, available cars, bookings, owners
-- Fully responsive design
-- No login required (demo mode)
+| Collection | What it stores |
+|---|---|
+| `cars` | All car listings (owner, model, price, availability, etc.) |
+| `bookings` | All confirmed bookings (renter, dates, total cost) |
 
 ---
 
-## API Endpoints
+## 🔌 API Endpoints
 
-| Method | Route            | Description              |
-|--------|------------------|--------------------------|
-| GET    | `/api/cars`      | List all cars (with filters) |
-| GET    | `/api/cars/<id>` | Get single car details   |
-| POST   | `/api/book`      | Book a car               |
-| POST   | `/api/list-car`  | List a new car           |
-| GET    | `/api/stats`     | Platform statistics      |
-| POST   | `/api/chat`      | LLM chat (DriveBot)      |
-
----
-
-## LLM Prompt Design
-
-The `/api/chat` endpoint injects real-time car data into the system prompt:
-- All available cars with prices, features, locations
-- DriveBot understands Indian travel contexts (Manali trips, Delhi commutes, family outings)
-- Maintains conversation history across turns
+| Method | Route | Description |
+|---|---|---|
+| GET | `/api/cars` | Get all cars (supports ?fuel= ?transmission= ?available= filters) |
+| GET | `/api/cars/<id>` | Get single car |
+| POST | `/api/book` | Book a car (updates Firestore) |
+| POST | `/api/list-car` | List a new car (saves to Firestore) |
+| GET | `/api/stats` | Live platform stats from Firestore |
+| POST | `/api/chat` | LLM DriveBot (reads live Firestore data) |
 
 ---
 
-## Notes for Presentation
+## 🔐 Security Note
 
-- The LLM integration is the key **emerging technology** — it makes the search experience intelligent instead of just filter-based
-- The system prompt is dynamically built from the live database, so DriveBot always has up-to-date information
-- In production, replace the in-memory `cars` list with a real database (SQLite, PostgreSQL)
+- Never commit `serviceAccountKey.json` to GitHub — add it to `.gitignore`
+- For production, move to Firebase Security Rules to restrict access
+
+---
+
+## 📝 Presentation Talking Points
+
+1. **Firebase Firestore** replaces a traditional database — cloud-hosted, real-time, no server setup
+2. **LLM integration** — DriveBot reads live data from Firestore every time a user chats, so it always knows current availability
+3. **Two emerging technologies** working together: Firebase (cloud NoSQL) + LLM (AI reasoning)
+4. In production: add Firebase Auth for user login, Firebase Storage for car photos
