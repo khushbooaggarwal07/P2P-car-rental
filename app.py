@@ -4,7 +4,7 @@ from datetime import datetime
 import firebase_admin
 from firebase_admin import credentials, firestore
 
-app = Flask(__name__)
+app = Flask(__name__, template_folder='.')
 client = anthropic.Anthropic()
 
 # ── Firebase Init ────────────────────────────────────────────────
@@ -27,7 +27,7 @@ def seed_cars():
             "model": "Maruti Swift", "year": 2022, "location": "Connaught Place, Delhi",
             "price_per_day": 1200, "fuel": "Petrol", "seats": 5,
             "transmission": "Manual", "rating": 4.8, "reviews": 24,
-            "available": True, "emoji": "🚗",
+            "available": True,
             "features": ["AC", "Bluetooth", "USB Charging", "Power Windows"],
             "description": "Well-maintained Swift, perfect for city drives. Always kept spotless.",
             "created_at": datetime.now().isoformat()
