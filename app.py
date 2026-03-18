@@ -1,41 +1,51 @@
 import streamlit as st
-import google.generativeai as genai
+import chromadb
 
 st.title("Peer-to-Peer Car Rental AI")
-st.write("Tell the AI about your trip, and it will recommend the best car for you to rent.")
-
-api_key = st.text_input("Enter Gemini API Key", type="password")
+st.write("This app uses a Vector Database to mathematically search for your perfect car. No API keys needed!")
 
 trip_details = st.text_area("Where are you going and what do you need the car for?")
 
-# List of cars hardcoded as a string
-available_cars = """
-1. 2018 Subaru Outback: Has All-Wheel Drive, a roof rack, good for snow or mountains. $65/day.
-2. 2021 Tesla Model 3: Electric vehicle, fast acceleration, good for city driving or tech fans. $90/day.
-3. 2015 Honda Odyssey: Minivan that seats 8 people, good for big families and road trips. $70/day.
-4. 2019 Ford Mustang: Convertible sports car, good for nice weather and weekends. $120/day.
-5. 2012 Toyota Prius: Hybrid, saves money on gas, good for long cheap drives. $35/day.
-6. 2020 Ford F-150: Big pickup truck, good for moving furniture or moving dirt. $85/day.
-"""
+cars = [
+    {"id": "1", "name": "2018 Subaru Outback", "desc": "Has All-Wheel Drive, a roof rack, good for snow or mountains. $65/day."},
+    {"id": "2", "name": "2021 Tesla Model 3", "desc": "Electric vehicle, fast acceleration, good for city driving or tech fans. $90/day."},
+    {"id": "3", "name": "2015 Honda Odyssey", "desc": "Minivan that seats 8 people, good for big families and road trips. $70/day."},
+    {"id": "4", "name": "2019 Ford Mustang", "desc": "Convertible sports car, good for nice weather and weekends. $120/day."},
+    {"id": "5", "name": "2012 Toyota Prius", "desc": "Hybrid, saves money on gas, good for long cheap drives. $35/day."},
+    {"id": "6", "name": "2020 Ford F-150", "desc": "Big pickup truck, good for moving furniture or moving dirt. $85/day."}
+]
+
+# Set up the local Vector Database
+# This will save a tiny database file to your folder
+client = chromadb.PersistentClient(path="./chroma_db")
+collection = client.get_or_create_collection(name="rental_cars")
+
+# Only add the cars to the database if it is empty
+if collection.count() == 0:
+    for car in cars:
+        collection.add(
+            documents=[car["desc"]],
+            metadatas=[{"name": car["name"]}],
+            ids=[car["id"]]
+        )
 
 if st.button("Find Best Car"):
     if trip_details == "":
         st.write("Please enter your trip details.")
-    elif api_key == "":
-        st.write("Please enter your API Key.")
     else:
-        st.write("The AI is picking your car...")
+        st.write("Searching database...")
         
-        genai.configure(api_key=api_key)
-        model = genai.GenerativeModel('gemini-1.5-flash')
+        # Search the database locally! Zero APIs needed.
+        # It turns your typed sentence into coordinates and finds the closest car based on meaning.
+        results = collection.query(
+            query_texts=[trip_details],
+            n_results=1
+        )
         
-        prompt = "You work for a car rental company. Here are the cars we have available to rent: " + available_cars + " The customer said this about their trip: '" + trip_details + "'. Write a short message telling them which car they should rent and why it is the perfect fit."
+        best_car_name = results["metadatas"][0][0]["name"]
+        best_car_desc = results["documents"][0][0]
         
-        try:
-            response = model.generate_content(prompt)
-            st.write("Here is your recommendation:")
-            st.write("---")
-            st.write(response.text)
-        except Exception as e:
-            st.write("An error occurred.")
-            st.write(e)
+        st.write("---")
+        st.write("### The AI recommends this car:")
+        st.write("**" + best_car_name + "**")
+        st.write(best_car_desc)
