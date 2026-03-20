@@ -7,19 +7,15 @@ from firebase_admin import credentials, firestore
 app = Flask(__name__, template_folder='.')
 client = anthropic.Anthropic()
 
-# ── Firebase Init ────────────────────────────────────────────────
-# Download your serviceAccountKey.json from Firebase Console:
-# Project Settings → Service Accounts → Generate New Private Key
 cred = credentials.Certificate("serviceAccountKey.json")
 firebase_admin.initialize_app(cred)
 db = firestore.client()
 
-# ── Seed default cars if DB is empty ────────────────────────────
 def seed_cars():
     cars_ref = db.collection("cars")
     existing = list(cars_ref.limit(1).stream())
     if existing:
-        return  # Already seeded
+        return
 
     default_cars = [
         {
@@ -37,7 +33,7 @@ def seed_cars():
             "model": "Hyundai Creta", "year": 2023, "location": "Hauz Khas, Delhi",
             "price_per_day": 2200, "fuel": "Diesel", "seats": 5,
             "transmission": "Automatic", "rating": 4.9, "reviews": 17,
-            "available": True, "emoji": "🚙",
+            "available": True,
             "features": ["AC", "Sunroof", "360 Camera", "Android Auto", "Cruise Control"],
             "description": "Premium SUV with all comforts. Great for highway trips and family outings.",
             "created_at": datetime.now().isoformat()
@@ -47,7 +43,7 @@ def seed_cars():
             "model": "Tata Nexon EV", "year": 2023, "location": "Dwarka, Delhi",
             "price_per_day": 1800, "fuel": "Electric", "seats": 5,
             "transmission": "Automatic", "rating": 4.7, "reviews": 31,
-            "available": True, "emoji": "⚡",
+            "available": True,
             "features": ["AC", "Fast Charging", "Apple CarPlay", "ADAS", "Ventilated Seats"],
             "description": "Eco-friendly EV with 312km range. Save on fuel, enjoy a modern drive.",
             "created_at": datetime.now().isoformat()
@@ -57,7 +53,7 @@ def seed_cars():
             "model": "Honda City", "year": 2021, "location": "Lajpat Nagar, Delhi",
             "price_per_day": 1500, "fuel": "Petrol", "seats": 5,
             "transmission": "Manual", "rating": 4.6, "reviews": 42,
-            "available": False, "emoji": "🚘",
+            "available": False,
             "features": ["AC", "Sunroof", "Touchscreen", "Rear Camera"],
             "description": "Reliable sedan with great mileage. Ideal for city and long drives.",
             "created_at": datetime.now().isoformat()
@@ -67,7 +63,7 @@ def seed_cars():
             "model": "Mahindra Thar", "year": 2022, "location": "Rohini, Delhi",
             "price_per_day": 3500, "fuel": "Diesel", "seats": 4,
             "transmission": "Manual", "rating": 4.9, "reviews": 12,
-            "available": True, "emoji": "🛻",
+            "available": True,
             "features": ["4WD", "Convertible Top", "Off-road Tyres", "Adventure Ready"],
             "description": "The ultimate adventure vehicle. Perfect for Manali trips and off-road fun.",
             "created_at": datetime.now().isoformat()
@@ -77,7 +73,7 @@ def seed_cars():
             "model": "Toyota Innova Crysta", "year": 2022, "location": "Saket, Delhi",
             "price_per_day": 2800, "fuel": "Diesel", "seats": 7,
             "transmission": "Automatic", "rating": 4.8, "reviews": 28,
-            "available": True, "emoji": "🚐",
+            "available": True,
             "features": ["AC", "Captain Seats", "Rear AC", "Touchscreen", "USB All Rows"],
             "description": "Spacious 7-seater, perfect for family trips or group outings.",
             "created_at": datetime.now().isoformat()
@@ -85,17 +81,15 @@ def seed_cars():
     ]
     for car in default_cars:
         cars_ref.add(car)
-    print("✅ Seeded default cars to Firebase")
+    print("Seeded default cars to Firebase")
 
 seed_cars()
 
-# ── Helper ───────────────────────────────────────────────────────
 def doc_to_car(doc):
     d = doc.to_dict()
     d["id"] = doc.id
     return d
 
-# ── Routes ───────────────────────────────────────────────────────
 @app.route("/")
 def index():
     return render_template("index.html")
@@ -105,7 +99,6 @@ def get_cars():
     fuel  = request.args.get("fuel", "all")
     tx    = request.args.get("transmission", "all")
     avail = request.args.get("available", "false") == "true"
-
     query = db.collection("cars")
     if fuel != "all":
         query = query.where("fuel", "==", fuel)
@@ -113,7 +106,6 @@ def get_cars():
         query = query.where("transmission", "==", tx)
     if avail:
         query = query.where("available", "==", True)
-
     cars = [doc_to_car(d) for d in query.stream()]
     return jsonify(cars)
 
@@ -129,22 +121,16 @@ def book_car():
     d = request.json
     car_ref = db.collection("cars").document(d["car_id"])
     car_doc = car_ref.get()
-
     if not car_doc.exists:
         return jsonify({"error": "Car not found"}), 404
     car = car_doc.to_dict()
     if not car["available"]:
         return jsonify({"error": "Car is not available"}), 400
-
     booking_data = {
-        "car_id": d["car_id"],
-        "car_model": car["model"],
-        "renter_name": d["renter_name"],
-        "renter_phone": d["renter_phone"],
-        "pickup_date": d["pickup_date"],
-        "return_date": d["return_date"],
-        "days": d["days"],
-        "total": car["price_per_day"] * d["days"],
+        "car_id": d["car_id"], "car_model": car["model"],
+        "renter_name": d["renter_name"], "renter_phone": d["renter_phone"],
+        "pickup_date": d["pickup_date"], "return_date": d["return_date"],
+        "days": d["days"], "total": car["price_per_day"] * d["days"],
         "booked_at": datetime.now().isoformat()
     }
     _, booking_ref = db.collection("bookings").add(booking_data)
@@ -156,19 +142,12 @@ def book_car():
 def list_car():
     d = request.json
     new_car = {
-        "owner": d["owner_name"],
-        "owner_phone": d["owner_phone"],
-        "model": d["model"],
-        "year": int(d["year"]),
-        "location": d["location"],
-        "price_per_day": int(d["price_per_day"]),
-        "fuel": d["fuel"],
-        "seats": int(d["seats"]),
+        "owner": d["owner_name"], "owner_phone": d["owner_phone"],
+        "model": d["model"], "year": int(d["year"]),
+        "location": d["location"], "price_per_day": int(d["price_per_day"]),
+        "fuel": d["fuel"], "seats": int(d["seats"]),
         "transmission": d["transmission"],
-        "rating": 5.0,
-        "reviews": 0,
-        "available": True,
-        "emoji": "🚗",
+        "rating": 5.0, "reviews": 0, "available": True,
         "features": [f.strip() for f in d.get("features", "").split(",") if f.strip()],
         "description": d.get("description", ""),
         "created_at": datetime.now().isoformat()
@@ -184,20 +163,15 @@ def stats():
     all_bookings = list(db.collection("bookings").stream())
     owners       = set(d.to_dict().get("owner") for d in all_cars)
     return jsonify({
-        "total":    len(all_cars),
-        "available": len(available),
-        "bookings": len(all_bookings),
-        "owners":   len(owners),
+        "total": len(all_cars), "available": len(available),
+        "bookings": len(all_bookings), "owners": len(owners),
     })
 
-# ── LLM Chat ─────────────────────────────────────────────────────
 @app.route("/api/chat", methods=["POST"])
 def chat():
     d = request.json
     msg     = d.get("message", "")
     history = d.get("history", [])
-
-    # Always pull fresh car data from Firebase for the AI
     cars = [doc_to_car(doc) for doc in db.collection("cars").stream()]
     cars_data = json.dumps([{
         "id": c["id"], "model": c["model"], "year": c["year"],
@@ -206,34 +180,17 @@ def chat():
         "available": c["available"], "features": c["features"],
         "description": c["description"], "rating": c["rating"]
     } for c in cars], indent=2)
-
     system = f"""You are DriveBot, a friendly AI assistant for PeerDrive — a peer-to-peer car rental platform in Delhi, India.
-
-Help users:
-- Find the right car based on budget, trip type, group size, fuel preference
-- Understand pricing and features
-- Decide between listing or renting a car
-
+Help users find the right car based on budget, trip type, group size, fuel preference.
 Live listings from Firebase:
 {cars_data}
-
-Rules:
-- Be friendly, concise, helpful
-- Mention car model when recommending
-- Always use ₹ for prices
-- If a car is unavailable, suggest alternatives
-- Keep replies short with bullet points for features
-- Understand Indian travel context (Manali trips, office commute, family outings, etc.)
-"""
+Rules: Be friendly and concise. Always use Rs for prices. Suggest alternatives if a car is unavailable. Understand Indian travel context."""
     messages = history + [{"role": "user", "content": msg}]
     resp = client.messages.create(
         model="claude-sonnet-4-20250514",
-        max_tokens=600,
-        system=system,
-        messages=messages
+        max_tokens=600, system=system, messages=messages
     )
     return jsonify({"reply": resp.content[0].text})
-
 
 if __name__ == "__main__":
     app.run(debug=True, port=5000)

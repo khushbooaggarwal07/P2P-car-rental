@@ -1,10 +1,10 @@
-# 🚗 PeerDrive — Peer-to-Peer Car Rental with Firebase + LLM
+# PeerDrive — Peer-to-Peer Car Rental with Firebase + LLM
 
 A full-stack peer-to-peer car rental app built with **Python Flask**, **Firebase Firestore** (real-time cloud database), and **Claude LLM** (AI assistant).
 
 ---
 
-## 🧠 Emerging Technologies Used
+## Emerging Technologies Used
 
 | Technology | Role |
 |---|---|
@@ -13,7 +13,7 @@ A full-stack peer-to-peer car rental app built with **Python Flask**, **Firebase
 
 ---
 
-## 🛠 Tech Stack
+## Tech Stack
 
 | Layer | Technology |
 |---|---|
@@ -24,7 +24,7 @@ A full-stack peer-to-peer car rental app built with **Python Flask**, **Firebase
 
 ---
 
-## 📁 Project Structure
+## Project Structure
 
 ```
 carshare/
@@ -32,13 +32,12 @@ carshare/
 ├── serviceAccountKey.json  ← YOUR Firebase key (you create this)
 ├── requirements.txt
 ├── README.md
-└── templates/
-    └── index.html          ← Full frontend
-```
+└── index.html
+    
 
 ---
 
-## 🚀 Setup in 5 Steps
+## Setup in 5 Steps
 
 ### Step 1 — Install dependencies
 ```bash
@@ -79,7 +78,7 @@ Open **http://localhost:5000** in your browser ✅
 
 ---
 
-## ✨ How Firebase Works in This App
+## How Firebase Works in This App
 
 ```
 User submits "List My Car" form
@@ -88,7 +87,7 @@ Flask receives POST /api/list-car
         ↓
 firebase_admin writes to Firestore "cars" collection
         ↓
-Data saved permanently in the cloud ☁️
+Data saved permanently in the cloud 
         ↓
 Next visitor opens the app → Flask reads from Firestore
         ↓
@@ -104,7 +103,7 @@ All listings show up instantly (even after server restart)
 
 ---
 
-## 🔌 API Endpoints
+## API Endpoints
 
 | Method | Route | Description |
 |---|---|---|
@@ -117,16 +116,9 @@ All listings show up instantly (even after server restart)
 
 ---
 
-## 🔐 Security Note
+## Security Note
 
 - Never commit `serviceAccountKey.json` to GitHub — add it to `.gitignore`
 - For production, move to Firebase Security Rules to restrict access
 
 ---
-
-## 📝 Presentation Talking Points
-
-1. **Firebase Firestore** replaces a traditional database — cloud-hosted, real-time, no server setup
-2. **LLM integration** — DriveBot reads live data from Firestore every time a user chats, so it always knows current availability
-3. **Two emerging technologies** working together: Firebase (cloud NoSQL) + LLM (AI reasoning)
-4. In production: add Firebase Auth for user login, Firebase Storage for car photos
