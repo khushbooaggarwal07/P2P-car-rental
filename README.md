@@ -23,8 +23,7 @@ carshare/
 ├── README.md
 └── index.html
     
-
----
+```
 
 ## Setup in 5 Steps
 
