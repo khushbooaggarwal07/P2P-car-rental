@@ -13,17 +13,6 @@ A full-stack peer-to-peer car rental app built with **Python Flask**, **Firebase
 
 ---
 
-## Tech Stack
-
-| Layer | Technology |
-|---|---|
-| Backend | Python + Flask |
-| Database | Firebase Firestore (NoSQL cloud DB) |
-| AI | Anthropic Claude LLM |
-| Frontend | HTML + CSS + Vanilla JS |
-
----
-
 ## Project Structure
 
 ```
