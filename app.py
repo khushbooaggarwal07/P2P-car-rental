@@ -1,22 +1,26 @@
 from flask import Flask, render_template, request, jsonify
-import json, anthropic
+import json, os
 from datetime import datetime
 import firebase_admin
 from firebase_admin import credentials, firestore
+from groq import Groq
 
 app = Flask(__name__, template_folder='.')
-client = anthropic.Anthropic()
 
+# groq setup
+groq_client = Groq(api_key=os.environ.get("GROQ_API_KEY"))
+
+# firebase setup
 cred = credentials.Certificate("serviceAccountKey.json")
 firebase_admin.initialize_app(cred)
 db = firestore.client()
 
+# seed cars
 def seed_cars():
     cars_ref = db.collection("cars")
     existing = list(cars_ref.limit(1).stream())
     if existing:
         return
-
     default_cars = [
         {
             "owner": "Rahul Sharma", "owner_phone": "98100-11111",
@@ -25,7 +29,7 @@ def seed_cars():
             "transmission": "Manual", "rating": 4.8, "reviews": 24,
             "available": True,
             "features": ["AC", "Bluetooth", "USB Charging", "Power Windows"],
-            "description": "Well-maintained Swift, perfect for city drives. Always kept spotless.",
+            "description": "Well-maintained Swift, perfect for city drives.",
             "created_at": datetime.now().isoformat()
         },
         {
@@ -34,8 +38,8 @@ def seed_cars():
             "price_per_day": 2200, "fuel": "Diesel", "seats": 5,
             "transmission": "Automatic", "rating": 4.9, "reviews": 17,
             "available": True,
-            "features": ["AC", "Sunroof", "360 Camera", "Android Auto", "Cruise Control"],
-            "description": "Premium SUV with all comforts. Great for highway trips and family outings.",
+            "features": ["AC", "Sunroof", "360 Camera", "Android Auto"],
+            "description": "Premium SUV, great for highway trips.",
             "created_at": datetime.now().isoformat()
         },
         {
@@ -44,8 +48,8 @@ def seed_cars():
             "price_per_day": 1800, "fuel": "Electric", "seats": 5,
             "transmission": "Automatic", "rating": 4.7, "reviews": 31,
             "available": True,
-            "features": ["AC", "Fast Charging", "Apple CarPlay", "ADAS", "Ventilated Seats"],
-            "description": "Eco-friendly EV with 312km range. Save on fuel, enjoy a modern drive.",
+            "features": ["AC", "Fast Charging", "Apple CarPlay"],
+            "description": "Eco-friendly EV with 312km range.",
             "created_at": datetime.now().isoformat()
         },
         {
@@ -54,8 +58,8 @@ def seed_cars():
             "price_per_day": 1500, "fuel": "Petrol", "seats": 5,
             "transmission": "Manual", "rating": 4.6, "reviews": 42,
             "available": False,
-            "features": ["AC", "Sunroof", "Touchscreen", "Rear Camera"],
-            "description": "Reliable sedan with great mileage. Ideal for city and long drives.",
+            "features": ["AC", "Sunroof", "Touchscreen"],
+            "description": "Reliable sedan, great mileage.",
             "created_at": datetime.now().isoformat()
         },
         {
@@ -64,8 +68,8 @@ def seed_cars():
             "price_per_day": 3500, "fuel": "Diesel", "seats": 4,
             "transmission": "Manual", "rating": 4.9, "reviews": 12,
             "available": True,
-            "features": ["4WD", "Convertible Top", "Off-road Tyres", "Adventure Ready"],
-            "description": "The ultimate adventure vehicle. Perfect for Manali trips and off-road fun.",
+            "features": ["4WD", "Convertible Top", "Off-road Tyres"],
+            "description": "Adventure vehicle, perfect for Manali trips.",
             "created_at": datetime.now().isoformat()
         },
         {
@@ -74,8 +78,8 @@ def seed_cars():
             "price_per_day": 2800, "fuel": "Diesel", "seats": 7,
             "transmission": "Automatic", "rating": 4.8, "reviews": 28,
             "available": True,
-            "features": ["AC", "Captain Seats", "Rear AC", "Touchscreen", "USB All Rows"],
-            "description": "Spacious 7-seater, perfect for family trips or group outings.",
+            "features": ["AC", "Captain Seats", "Rear AC", "Touchscreen"],
+            "description": "Spacious 7-seater for family trips.",
             "created_at": datetime.now().isoformat()
         },
     ]
@@ -85,11 +89,13 @@ def seed_cars():
 
 seed_cars()
 
+# helper
 def doc_to_car(doc):
     d = doc.to_dict()
     d["id"] = doc.id
     return d
 
+# routes
 @app.route("/")
 def index():
     return render_template("index.html")
@@ -167,30 +173,49 @@ def stats():
         "bookings": len(all_bookings), "owners": len(owners),
     })
 
+# chat using groq
 @app.route("/api/chat", methods=["POST"])
 def chat():
     d = request.json
     msg     = d.get("message", "")
     history = d.get("history", [])
+
     cars = [doc_to_car(doc) for doc in db.collection("cars").stream()]
-    cars_data = json.dumps([{
-        "id": c["id"], "model": c["model"], "year": c["year"],
-        "location": c["location"], "price_per_day": c["price_per_day"],
-        "fuel": c["fuel"], "seats": c["seats"], "transmission": c["transmission"],
-        "available": c["available"], "features": c["features"],
-        "description": c["description"], "rating": c["rating"]
-    } for c in cars], indent=2)
-    system = f"""You are DriveBot, a friendly AI assistant for PeerDrive — a peer-to-peer car rental platform in Delhi, India.
-Help users find the right car based on budget, trip type, group size, fuel preference.
-Live listings from Firebase:
-{cars_data}
-Rules: Be friendly and concise. Always use Rs for prices. Suggest alternatives if a car is unavailable. Understand Indian travel context."""
-    messages = history + [{"role": "user", "content": msg}]
-    resp = client.messages.create(
-        model="claude-sonnet-4-20250514",
-        max_tokens=600, system=system, messages=messages
-    )
-    return jsonify({"reply": resp.content[0].text})
+    car_lines = []
+    for c in cars:
+        status = "available" if c["available"] else "booked"
+        car_lines.append(
+            f"- {c['model']} {c['year']}: Rs{c['price_per_day']}/day, "
+            f"{c['fuel']}, {c['seats']} seats, {c['transmission']}, "
+            f"{c['location']} [{status}]"
+        )
+    cars_text = "\n".join(car_lines)
+
+    system_prompt = f"""You are DriveBot, a friendly AI assistant for PeerDrive, a peer-to-peer car rental platform in Delhi, India.
+Help users find the right car. Use Rs for prices. Be friendly and concise. Plain text only, no asterisks or markdown.
+Understand Indian travel context like Manali trips, office commute, family outings.
+
+Current car listings:
+{cars_text}"""
+
+    messages = [{"role": "system", "content": system_prompt}]
+    for h in history[-4:]:
+        messages.append({"role": h["role"], "content": h["content"]})
+    messages.append({"role": "user", "content": msg})
+
+    try:
+        response = groq_client.chat.completions.create(
+            model="llama-3.3-70b-versatile",
+            messages=messages,
+            max_tokens=300
+        )
+        reply = response.choices[0].message.content
+        print(f"Groq reply: {reply[:80]}")
+        return jsonify({"reply": reply})
+    except Exception as e:
+        print(f"Groq error: {e}")
+        return jsonify({"error": str(e)}), 500
+
 
 if __name__ == "__main__":
     app.run(debug=True, port=5000)

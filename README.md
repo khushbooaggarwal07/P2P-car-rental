@@ -1,6 +1,6 @@
-# PeerDrive — Peer-to-Peer Car Rental with Firebase + LLM
+# PeerDrive — Peer-to-Peer Car Rental Platform
 
-A full-stack peer-to-peer car rental app built with **Python Flask**, **Firebase Firestore** (real-time cloud database), and **Claude LLM** (AI assistant).
+A full-stack peer-to-peer car rental web app built with Python Flask, Firebase Firestore, and an LLM (Large Language Model) powered AI assistant called DriveBot.
 
 ---
 
@@ -8,8 +8,8 @@ A full-stack peer-to-peer car rental app built with **Python Flask**, **Firebase
 
 | Technology | Role |
 |---|---|
-| **LLM (Claude API)** | AI DriveBot assistant — recommends cars based on user needs |
-| **Firebase Firestore** | Real-time cloud database — stores all listings & bookings permanently |
+| LLM via Groq API | AI DriveBot assistant that recommends cars based on user needs |
+| Firebase Firestore | Real-time cloud database that stores all listings and bookings permanently |
 
 ---
 
@@ -17,77 +17,51 @@ A full-stack peer-to-peer car rental app built with **Python Flask**, **Firebase
 
 ```
 carshare/
-├── app.py                  ← Flask backend + Firebase + LLM
-├── serviceAccountKey.json  ← YOUR Firebase key (you create this)
+├── app.py                  
+├── index.html              
+├── serviceAccountKey.json  
 ├── requirements.txt
 ├── README.md
-└── index.html
-    
+└── static/
 ```
-
-## Setup in 5 Steps
-
-### Step 1 — Install dependencies
-```bash
-pip install -r requirements.txt
-```
-
-### Step 2 — Create a Firebase project
-1. Go to **https://console.firebase.google.com**
-2. Click **"Add Project"** → give it a name (e.g. `peerdrive`)
-3. Disable Google Analytics (not needed) → Create Project
-
-### Step 3 — Set up Firestore
-1. In your Firebase project, go to **Build → Firestore Database**
-2. Click **"Create database"**
-3. Choose **"Start in test mode"** (allows all reads/writes for 30 days)
-4. Select a region (e.g. `asia-south1` for India) → Done
-
-### Step 4 — Get your Service Account Key
-1. In Firebase Console → **Project Settings** (gear icon)
-2. Go to **"Service accounts"** tab
-3. Click **"Generate new private key"** → Download the JSON file
-4. **Rename it to `serviceAccountKey.json`**
-5. **Place it in the `carshare/` folder** (same folder as `app.py`)
-
-### Step 5 — Set your Anthropic API key & run
-```bash
-# Mac/Linux
-export ANTHROPIC_API_KEY=sk-ant-xxxxxxxx
-
-# Windows
-set ANTHROPIC_API_KEY=sk-ant-xxxxxxxx
-
-# Run the app
-python app.py
-```
-
-Open **http://localhost:5000** in your browser ✅
 
 ---
 
-## How Firebase Works in This App
+## Setup in 4 Steps
 
+### Step 1 - Install dependencies
 ```
-User submits "List My Car" form
-        ↓
-Flask receives POST /api/list-car
-        ↓
-firebase_admin writes to Firestore "cars" collection
-        ↓
-Data saved permanently in the cloud 
-        ↓
-Next visitor opens the app → Flask reads from Firestore
-        ↓
-All listings show up instantly (even after server restart)
+pip install -r requirements.txt
 ```
 
-### Firestore Collections
+### Step 2 - Add Firebase key
+Download serviceAccountKey.json from Firebase Console and place it in the project folder.
+Firebase Console - Project Settings - Service Accounts - Generate New Private Key
 
-| Collection | What it stores |
-|---|---|
-| `cars` | All car listings (owner, model, price, availability, etc.) |
-| `bookings` | All confirmed bookings (renter, dates, total cost) |
+### Step 3 - Get Groq API key
+Go to https://console.groq.com, sign up, and create a free API key.
+
+### Step 4 - Run the app
+```
+set GROQ_API_KEY=your_groq_key_here
+python app.py
+```
+
+Open http://localhost:5000 in your browser.
+
+---
+
+## Features
+
+For Renters:
+- Browse Cars - Filter by fuel type, transmission, availability
+- Book Instantly - Pick dates, enter details, confirm in one click
+- AI Assistant DriveBot - Chat with an LLM to get car recommendations
+
+For Car Owners:
+- List Your Car - Fill a simple form, car goes live immediately
+- Set your own price per day
+- Car is auto-marked as booked when rented
 
 ---
 
@@ -95,18 +69,24 @@ All listings show up instantly (even after server restart)
 
 | Method | Route | Description |
 |---|---|---|
-| GET | `/api/cars` | Get all cars (supports ?fuel= ?transmission= ?available= filters) |
-| GET | `/api/cars/<id>` | Get single car |
-| POST | `/api/book` | Book a car (updates Firestore) |
-| POST | `/api/list-car` | List a new car (saves to Firestore) |
-| GET | `/api/stats` | Live platform stats from Firestore |
-| POST | `/api/chat` | LLM DriveBot (reads live Firestore data) |
+| GET | /api/cars | List all cars with optional filters |
+| GET | /api/cars/id | Get single car details |
+| POST | /api/book | Book a car |
+| POST | /api/list-car | List a new car |
+| GET | /api/stats | Platform statistics |
+| POST | /api/chat | LLM DriveBot chat |
 
 ---
 
-## Security Note
+## How LLM Integration Works
 
-- Never commit `serviceAccountKey.json` to GitHub — add it to `.gitignore`
-- For production, move to Firebase Security Rules to restrict access
+1. User opens the chat widget on the website
+2. Frontend sends the user message to /api/chat
+3. Flask fetches live car listings from Firebase
+4. A prompt is built with car data and sent to Groq API
+5. LLaMA 3.3 model reasons about the user needs and recommends the best car
+6. Reply is returned and shown in the chat widget
+
+DriveBot has live awareness of all available cars, their prices, features, and availability from Firebase.
 
 ---
